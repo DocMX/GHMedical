@@ -1,13 +1,5 @@
-export default function LoginPage() {
-  return (
-    <>
-      <h2 className="mb-6 text-center text-2xl font-semibold">
-        Login
-      </h2>
+import { LoginForm } from "@/features/auth/components/login-form";
 
-      <p className="text-center text-gray-600">
-        Login form coming soon...
-      </p>
-    </>
-  );
+export default function LoginPage() {
+  return <LoginForm />;
 }
