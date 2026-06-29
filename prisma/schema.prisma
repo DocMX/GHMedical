@@ -11,3 +11,388 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+//enums
+
+enum UserRole {
+  ADMIN
+  SALES
+  VIEWER
+}
+
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum QuoteStatus {
+  DRAFT
+  SENT
+  APPROVED
+  REJECTED
+  EXPIRED
+  CANCELLED
+}
+
+enum InventoryMovementType {
+  IN
+  OUT
+  ADJUSTMENT
+}
+
+//profile
+
+model Profile {
+
+  id            String   @id @default(cuid())
+
+  authUserId    String   @unique
+
+  fullName      String
+
+  email         String   @unique
+
+  phone         String?
+
+  role          UserRole @default(SALES)
+
+  active        Boolean  @default(true)
+
+  createdAt     DateTime @default(now())
+
+  updatedAt     DateTime @updatedAt
+
+  quotationsSold           Quotation[] @relation("SoldBy")
+
+  quotationsInstrumented   Quotation[] @relation("InstrumentedBy")
+
+  createdQuotes            Quotation[] @relation("CreatedBy")
+
+}
+
+//category
+
+model Category {
+
+  id          String   @id @default(cuid())
+
+  name        String
+
+  description String?
+
+  active      Boolean @default(true)
+
+  createdAt   DateTime @default(now())
+
+  updatedAt   DateTime @updatedAt
+
+  products    Product[]
+
+}
+
+
+//suplier
+
+model Supplier {
+
+  id             String @id @default(cuid())
+
+  companyName    String
+
+  contactName    String?
+
+  phone          String?
+
+  email          String?
+
+  address        String?
+
+  city           String?
+
+  state          String?
+
+  country        String?
+
+  active         Boolean @default(true)
+
+  createdAt      DateTime @default(now())
+
+  updatedAt      DateTime @updatedAt
+
+  products       Product[]
+
+}
+
+//Product
+
+model Product {
+
+  id               String @id @default(cuid())
+
+  sku              String @unique
+
+  barcode          String?
+
+  name             String
+
+  description      String?
+
+  brand            String?
+
+  model            String?
+
+  unit             String
+
+  purchasePrice    Decimal @db.Decimal(10,2)
+
+  averageCost      Decimal? @db.Decimal(10,2)
+
+  salePrice        Decimal @db.Decimal(10,2)
+
+  stock            Int @default(0)
+
+  minimumStock     Int @default(0)
+
+  status           ProductStatus @default(ACTIVE)
+
+  categoryId       String
+
+  supplierId       String
+
+  createdAt        DateTime @default(now())
+
+  updatedAt        DateTime @updatedAt
+
+  category         Category @relation(fields: [categoryId], references: [id])
+
+  supplier         Supplier @relation(fields: [supplierId], references: [id])
+
+  quotationItems   QuotationItem[]
+
+  inventory        InventoryMovement[]
+
+  images           ProductImage[]
+
+  documents        ProductDocument[]
+
+  priceHistory     PriceHistory[]
+
+}
+
+
+// prodcut images 
+model ProductImage {
+
+  id          String @id @default(cuid())
+
+  productId   String
+
+  url         String
+
+  alt         String?
+
+  order       Int @default(0)
+
+  createdAt   DateTime @default(now())
+
+  product Product
+      @relation(fields:[productId], references:[id], onDelete: Cascade)
+
+}
+
+
+//product documents 
+model ProductDocument {
+
+  id          String @id @default(cuid())
+
+  productId   String
+
+  name        String
+
+  fileUrl     String
+
+  createdAt   DateTime @default(now())
+
+  product Product
+      @relation(fields:[productId], references:[id], onDelete: Cascade)
+
+}
+
+//product huistyry
+
+model PriceHistory {
+
+  id            String @id @default(cuid())
+
+  productId     String
+
+  purchasePrice Decimal @db.Decimal(10,2)
+
+  salePrice     Decimal @db.Decimal(10,2)
+
+  changedById   String
+
+  createdAt     DateTime @default(now())
+
+  product Product
+      @relation(fields:[productId], references:[id])
+
+}
+
+//cotizaciones parte dura
+
+model Quotation {
+
+  id                   String @id @default(cuid())
+
+  folio                String @unique
+
+  customerId           String
+
+  soldById             String
+
+  instrumentedById     String?
+
+  createdById          String
+
+  procedureDate        DateTime?
+
+  subtotal             Decimal @db.Decimal(10,2)
+
+  tax                  Decimal @db.Decimal(10,2)
+
+  discount             Decimal @db.Decimal(10,2)
+
+  total                Decimal @db.Decimal(10,2)
+
+  status               QuoteStatus @default(DRAFT)
+
+  internalComments     String?
+
+  customerNotes        String?
+
+  createdAt            DateTime @default(now())
+
+  updatedAt            DateTime @updatedAt
+
+  customer Customer
+      @relation(fields:[customerId], references:[id])
+
+  soldBy Profile
+      @relation("SoldBy", fields:[soldById], references:[id])
+
+  instrumentedBy Profile?
+      @relation("InstrumentedBy", fields:[instrumentedById], references:[id])
+
+  createdBy Profile
+      @relation("CreatedBy", fields:[createdById], references:[id])
+
+  items QuotationItem[]
+
+}
+
+//quotationItems
+
+model QuotationItem {
+
+  id            String @id @default(cuid())
+
+  quotationId   String
+
+  productId     String
+
+  quantity      Int
+
+  unitPrice     Decimal @db.Decimal(10,2)
+
+  discount      Decimal @db.Decimal(10,2)
+
+  total         Decimal @db.Decimal(10,2)
+
+  quotation Quotation
+      @relation(fields:[quotationId], references:[id], onDelete: Cascade)
+
+  product Product
+      @relation(fields:[productId], references:[id])
+
+}
+
+//InventoryMovement
+
+model InventoryMovement {
+
+  id            String @id @default(cuid())
+
+  productId     String
+
+  quantity      Int
+
+  type          InventoryMovementType
+
+  reason        String
+
+  createdById   String
+
+  createdAt     DateTime @default(now())
+
+  product Product
+      @relation(fields:[productId], references:[id])
+
+}
+
+//auditlog
+
+model AuditLog {
+
+  id          String @id @default(cuid())
+
+  userId      String
+
+  action      String
+
+  tableName   String
+
+  recordId    String
+
+  changes     Json?
+
+  createdAt   DateTime @default(now())
+
+}
+
+
+//CUstomer
+
+model Customer {
+
+  id            String @id @default(cuid())
+
+  hospital      String
+
+  doctor        String?
+
+  contactName   String
+
+  phone         String?
+
+  email         String?
+
+  address       String?
+
+  city          String?
+
+  state         String?
+
+  country       String?
+
+  notes         String?
+
+  active        Boolean @default(true)
+
+  createdAt     DateTime @default(now())
+
+  updatedAt     DateTime @updatedAt
+
+  quotations    Quotation[]
+
+}
